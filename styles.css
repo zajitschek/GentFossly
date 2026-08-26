@@ -1,4 +1,3 @@
-/* Base layout */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -28,7 +27,7 @@ body {
   position: relative;
   transform-style: preserve-3d;
   cursor: pointer;
-  /* Gives the cube a natural 3D tilt by default */
+  /* Starting 3D angle on load */
   transform: rotateX(-15deg) rotateY(25deg);
 }
 
@@ -36,8 +35,8 @@ body {
   position: absolute;
   width: 200px;
   height: 200px;
-  background: rgba(20, 20, 20, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(20, 20, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: 6px;
@@ -48,23 +47,20 @@ body {
   text-align: center;
   user-select: none;
   overflow: hidden;
+  backface-visibility: visible;
+  /* Smooth transitions for internal elements */
   transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
-.face:hover {
-  border-color: rgba(255, 255, 255, 0.8);
-  background: rgba(30, 30, 30, 0.85);
-}
+/* Precise CSS positioning (do not touch with JS inline styles) */
+.front  { transform: rotateY(0deg) translateZ(100px) !important; }
+.back   { transform: rotateY(180deg) translateZ(100px) !important; }
+.right  { transform: rotateY(90deg) translateZ(100px) !important; }
+.left   { transform: rotateY(-90deg) translateZ(100px) !important; }
+.top    { transform: rotateX(90deg) translateZ(100px) !important; }
+.bottom { transform: rotateX(-90deg) translateZ(100px) !important; }
 
-/* 3D Placement */
-.front  { transform: rotateY(0deg) translateZ(100px); }
-.back   { transform: rotateY(180deg) translateZ(100px); }
-.right  { transform: rotateY(90deg) translateZ(100px); }
-.left   { transform: rotateY(-90deg) translateZ(100px); }
-.top    { transform: rotateX(90deg) translateZ(100px); }
-.bottom { transform: rotateX(-90deg) translateZ(100px); }
-
-/* Face Content States */
+/* Content visibilities */
 .face-preview {
   font-size: 1.1rem;
   font-weight: 600;
@@ -102,9 +98,8 @@ body {
   color: #ffffff;
 }
 
-/* Expanded View Overrides */
+/* Expanded active state */
 .face.expanded {
-  z-index: 10;
   border-color: #ffffff;
   background: rgba(10, 10, 10, 0.95);
 }
