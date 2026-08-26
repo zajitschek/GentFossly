@@ -2,9 +2,18 @@ const cube = document.getElementById('cube');
 const faces = document.querySelectorAll('.face');
 let activeFace = null;
 
-// Track angles for smooth dragging
-let currentX = -15; // Initial X tilt
-let currentY = 25;  // Initial Y angle
+// Target rotation angles for each face to bring it directly to the front
+const faceRotations = {
+  front:  { rotateX: 0,   rotateY: 0 },
+  back:   { rotateX: 0,   rotateY: 180 },
+  right:  { rotateX: 0,   rotateY: -90 },
+  left:   { rotateX: 0,   rotateY: 90 },
+  top:    { rotateX: -90, rotateY: 0 },
+  bottom: { rotateX: 90,  rotateY: 0 }
+};
+
+let currentX = -15; 
+let currentY = 25;  
 let touchStartX = 0;
 let touchStartY = 0;
 
@@ -23,7 +32,7 @@ window.addEventListener('mousemove', (e) => {
   });
 });
 
-/* --- 2. TOUCH DRAGGING (Mobile / iOS) --- */
+/* --- 2. TOUCH DRAGGING (Mobile) --- */
 window.addEventListener('touchstart', (e) => {
   if (activeFace) return;
   touchStartX = e.touches[0].clientX;
@@ -39,7 +48,6 @@ window.addEventListener('touchmove', (e) => {
   const deltaX = touchX - touchStartX;
   const deltaY = touchY - touchStartY;
 
-  // Sensitivity factor for swipe turn
   currentY += deltaX * 0.4;
   currentX -= deltaY * 0.4;
 
@@ -54,45 +62,60 @@ window.addEventListener('touchmove', (e) => {
   touchStartY = touchY;
 });
 
-/* --- 3. CLICK / TAP FACE TO EXPAND --- */
+/* --- 3. CLICK / TAP FACE TO SNAP FRONT & EXPAND --- */
 faces.forEach((face) => {
   face.addEventListener('click', (e) => {
     e.stopPropagation();
 
     if (activeFace === face) {
-      // Zoom out back to cube geometry
-      gsap.to(face, {
-        scale: 1,
-        z: 100,
-        duration: 0.5,
-        ease: 'power2.inOut',
-      });
+      // Tap again to close
       face.classList.remove('expanded');
       activeFace = null;
+
+      // Scale back down
+      gsap.to(cube, {
+        scale: 1,
+        duration: 0.5,
+        ease: 'power2.inOut'
+      });
     } else {
+      // Close previous face if active
       if (activeFace) {
-        gsap.to(activeFace, { scale: 1, z: 100, duration: 0.3 });
         activeFace.classList.remove('expanded');
       }
 
-      face.classList.add('expanded');
       activeFace = face;
+      face.classList.add('expanded');
 
-      gsap.to(face, {
-        scale: 1.8, // Slightly reduced scale factor for mobile screens
-        z: 250,
-        duration: 0.6,
-        ease: 'back.out(1.2)',
+      // Identify face orientation
+      const faceClass = Array.from(face.classList).find(c => faceRotations[c]);
+      const targetRotation = faceRotations[faceClass];
+
+      // Rotate cube so face points straight ahead, then scale slightly
+      gsap.to(cube, {
+        rotateX: targetRotation.rotateX,
+        rotateY: targetRotation.rotateY,
+        scale: 1.4, 
+        duration: 0.7,
+        ease: 'power2.inOut',
       });
+
+      // Update current angles so manual dragging continues smoothly from here
+      currentX = targetRotation.rotateX;
+      currentY = targetRotation.rotateY;
     }
   });
 });
 
-// Reset view on background click
+// Reset view when clicking off the cube
 window.addEventListener('click', () => {
   if (activeFace) {
-    gsap.to(activeFace, { scale: 1, z: 100, duration: 0.5 });
     activeFace.classList.remove('expanded');
     activeFace = null;
+    gsap.to(cube, {
+      scale: 1,
+      duration: 0.5,
+      ease: 'power2.inOut'
+    });
   }
 });
