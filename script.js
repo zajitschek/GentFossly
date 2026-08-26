@@ -3,21 +3,59 @@ const canvas = document.getElementById('webgl');
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 8;
+camera.position.z = 7.5;
 
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// --- 2. GENERATE CUBE PARTICLES ---
-const particleCount = 4000;
-const geometry = new THREE.BufferGeometry();
+// --- 2. CREATE FACE TEXTURES WITH TEXT EMBEDDED ---
+function createFaceTexture(text) {
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = 512;
+  texCanvas.height = 512;
+  const ctx = texCanvas.getContext('2d');
+
+  // Dark translucent background with border frame
+  ctx.fillStyle = 'rgba(20, 20, 20, 0.85)';
+  ctx.fillRect(0, 0, 512, 512);
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(10, 10, 492, 492);
+
+  // Sharp centered text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 52px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 256);
+
+  return new THREE.CanvasTexture(texCanvas);
+}
+
+const faceTexts = ['ABOUT', 'THOUGHTS', 'LAB', 'LATITUDE', 'ESSAYS', 'CONTACT'];
+const materials = faceTexts.map(text => new THREE.MeshBasicMaterial({
+  map: createFaceTexture(text),
+  transparent: true,
+  opacity: 0.9,
+  side: THREE.DoubleSide
+}));
+
+// Build invisible solid mesh box for raycasting touch clicks
+const boxGeo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
+const cubeMesh = new THREE.Mesh(boxGeo, materials);
+scene.add(cubeMesh);
+
+// --- 3. GENERATE PARTICLE CUBE SURROUNDING MESH ---
+const particleCount = 3500;
+const particleGeo = new THREE.BufferGeometry();
 
 const cubePositions = new Float32Array(particleCount * 3);
 const explodedPositions = new Float32Array(particleCount * 3);
 const currentPositions = new Float32Array(particleCount * 3);
 
-const cubeSize = 2.2;
+const cubeSize = 2.25;
 const half = cubeSize / 2;
 
 for (let i = 0; i < particleCount; i++) {
@@ -45,7 +83,6 @@ for (let i = 0; i < particleCount; i++) {
   currentPositions[i3 + 1] = y;
   currentPositions[i3 + 2] = z;
 
-  // Exploded position coordinates
   const radius = 6 + Math.random() * 8;
   const theta = Math.random() * Math.PI * 2;
   const phi = Math.acos((Math.random() * 2) - 1);
@@ -55,59 +92,32 @@ for (let i = 0; i < particleCount; i++) {
   explodedPositions[i3 + 2] = radius * Math.cos(phi);
 }
 
-geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+particleGeo.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
 
-const material = new THREE.PointsMaterial({
-  size: 0.03,
+const particleMat = new THREE.PointsMaterial({
+  size: 0.035,
   color: 0xffffff,
   transparent: true,
-  opacity: 0.85,
+  opacity: 0.8,
   blending: THREE.AdditiveBlending
 });
 
-const particleSystem = new THREE.Points(geometry, material);
+const particleSystem = new THREE.Points(particleGeo, particleMat);
 scene.add(particleSystem);
 
-// --- 3. FACE LABELS & 3D COORDINATES ---
-const labelElements = {
-  front:  { el: document.getElementById('label-front'),  pos: new THREE.Vector3(0, 0, half) },
-  back:   { el: document.getElementById('label-back'),   pos: new THREE.Vector3(0, 0, -half) },
-  right:  { el: document.getElementById('label-right'),  pos: new THREE.Vector3(half, 0, 0) },
-  left:   { el: document.getElementById('label-left'),   pos: new THREE.Vector3(-half, 0, 0) },
-  top:    { el: document.getElementById('label-top'),    pos: new THREE.Vector3(0, half, 0) },
-  bottom: { el: document.getElementById('label-bottom'), pos: new THREE.Vector3(0, -half, 0) }
-};
+// Group cube mesh and particles together so they rotate in sync
+const cubeGroup = new THREE.Group();
+cubeGroup.add(cubeMesh);
+cubeGroup.add(particleSystem);
+cubeGroup.rotation.x = -0.3;
+cubeGroup.rotation.y = 0.5;
+scene.add(cubeGroup);
 
-function updateLabels() {
-  if (isExploded) {
-    Object.values(labelElements).forEach(item => item.el.style.opacity = 0);
-    return;
-  }
-
-  const tempV = new THREE.Vector3();
-
-  Object.values(labelElements).forEach(item => {
-    tempV.copy(item.pos);
-    tempV.applyEuler(particleSystem.rotation);
-    
-    // Check if face is pointing toward camera (backface culling check)
-    if (tempV.z > -0.2) {
-      tempV.project(camera);
-      const x = (tempV.x *  .5 + .5) * window.innerWidth;
-      const y = (tempV.y * -.5 + .5) * window.innerHeight;
-
-      item.el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
-      item.el.style.opacity = 1;
-    } else {
-      item.el.style.opacity = 0;
-    }
-  });
-}
-
-// --- 4. INTERACTION & ROTATION LOGIC ---
+// --- 4. ROTATION & INTERACTION LOGIC ---
 let isExploded = false;
 let targetRotationX = -0.3;
 let targetRotationY = 0.5;
+let isDragging = false;
 
 window.addEventListener('mousemove', (e) => {
   if (isExploded) return;
@@ -119,6 +129,7 @@ window.addEventListener('mousemove', (e) => {
 
 let touchStartX = 0, touchStartY = 0;
 window.addEventListener('touchstart', (e) => {
+  isDragging = false;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
@@ -127,13 +138,20 @@ window.addEventListener('touchmove', (e) => {
   if (isExploded) return;
   const deltaX = e.touches[0].clientX - touchStartX;
   const deltaY = e.touches[0].clientY - touchStartY;
+
+  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+    isDragging = true;
+  }
+
   targetRotationY += deltaX * 0.005;
   targetRotationX += deltaY * 0.005;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
-// --- 5. EXPLOSION ANIMATION ---
+// --- 5. RAYCASTING TAP/CLICK ON CUBE ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 const modal = document.getElementById('content-modal');
 const closeBtn = document.getElementById('close-btn');
 
@@ -141,10 +159,10 @@ function explodeCube() {
   isExploded = true;
   const posAttr = particleSystem.geometry.attributes.position;
 
-  // Fade out text labels
-  Object.values(labelElements).forEach(item => item.el.style.opacity = 0);
+  // Fade out solid mesh cube
+  gsap.to(cubeMesh.material, { opacity: 0, duration: 0.4 });
 
-  // Scatter points
+  // Scatter particles outward
   for (let i = 0; i < particleCount; i++) {
     const i3 = i * 3;
     gsap.to(posAttr.array, {
@@ -157,7 +175,7 @@ function explodeCube() {
     });
   }
 
-  // Fade in modal grid
+  // Fade in content modal card
   gsap.to(modal, {
     opacity: 1,
     scale: 1,
@@ -172,6 +190,7 @@ function assembleCube() {
   isExploded = false;
   const posAttr = particleSystem.geometry.attributes.position;
 
+  // Hide modal card
   gsap.to(modal, {
     opacity: 0,
     scale: 0.85,
@@ -180,7 +199,10 @@ function assembleCube() {
     onComplete: () => { modal.style.pointerEvents = 'none'; }
   });
 
-  // Re-assemble points into cube
+  // Fade mesh back in
+  gsap.to(cubeMesh.material, { opacity: 0.9, duration: 0.8, delay: 0.4 });
+
+  // Re-assemble particle points into cube
   for (let i = 0; i < particleCount; i++) {
     const i3 = i * 3;
     gsap.to(posAttr.array, {
@@ -194,8 +216,27 @@ function assembleCube() {
   }
 }
 
-// Trigger explosion when tapping ABOUT label
-document.getElementById('label-front').addEventListener('click', explodeCube);
+function handleTap(e) {
+  if (isExploded || isDragging) return;
+
+  const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+  const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+
+  if (!clientX || !clientY) return;
+
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(cubeMesh);
+
+  if (intersects.length > 0) {
+    explodeCube();
+  }
+}
+
+window.addEventListener('click', handleTap);
+window.addEventListener('touchend', handleTap);
 closeBtn.addEventListener('click', assembleCube);
 
 // --- 6. RENDER LOOP ---
@@ -203,13 +244,12 @@ function animate() {
   requestAnimationFrame(animate);
 
   if (!isExploded) {
-    particleSystem.rotation.x += (targetRotationX - particleSystem.rotation.x) * 0.05;
-    particleSystem.rotation.y += (targetRotationY - particleSystem.rotation.y) * 0.05;
+    cubeGroup.rotation.x += (targetRotationX - cubeGroup.rotation.x) * 0.05;
+    cubeGroup.rotation.y += (targetRotationY - cubeGroup.rotation.y) * 0.05;
   } else {
-    particleSystem.rotation.y += 0.001;
+    cubeGroup.rotation.y += 0.001;
   }
 
-  updateLabels();
   renderer.render(scene, camera);
 }
 animate();
