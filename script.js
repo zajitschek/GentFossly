@@ -2,7 +2,7 @@ const cube = document.getElementById('cube');
 const faces = document.querySelectorAll('.face');
 let activeFace = null;
 
-// Target rotation angles for each face to bring it directly to the front
+// Clean map to rotate the entire cube so the clicked face directly targets front
 const faceRotations = {
   front:  { rotateX: 0,   rotateY: 0 },
   back:   { rotateX: 0,   rotateY: 180 },
@@ -17,7 +17,7 @@ let currentY = 25;
 let touchStartX = 0;
 let touchStartY = 0;
 
-/* --- 1. MOUSE MOVEMENT (Desktop) --- */
+/* Desktop Hover */
 window.addEventListener('mousemove', (e) => {
   if (activeFace) return;
 
@@ -32,7 +32,7 @@ window.addEventListener('mousemove', (e) => {
   });
 });
 
-/* --- 2. TOUCH DRAGGING (Mobile) --- */
+/* Mobile Swipe */
 window.addEventListener('touchstart', (e) => {
   if (activeFace) return;
   touchStartX = e.touches[0].clientX;
@@ -62,24 +62,30 @@ window.addEventListener('touchmove', (e) => {
   touchStartY = touchY;
 });
 
-/* --- 3. CLICK / TAP FACE TO SNAP FRONT & EXPAND --- */
+/* Tap interaction */
 faces.forEach((face) => {
   face.addEventListener('click', (e) => {
     e.stopPropagation();
 
+    // Clear inline transforms if any were left over
+    gsap.set(faces, { clearProps: "transform,z,scale" });
+
     if (activeFace === face) {
-      // Tap again to close
+      // Return to standard angle on close
       face.classList.remove('expanded');
       activeFace = null;
 
-      // Scale back down
       gsap.to(cube, {
+        rotateX: -15,
+        rotateY: 25,
         scale: 1,
-        duration: 0.5,
+        duration: 0.6,
         ease: 'power2.inOut'
       });
+
+      currentX = -15;
+      currentY = 25;
     } else {
-      // Close previous face if active
       if (activeFace) {
         activeFace.classList.remove('expanded');
       }
@@ -87,35 +93,40 @@ faces.forEach((face) => {
       activeFace = face;
       face.classList.add('expanded');
 
-      // Identify face orientation
       const faceClass = Array.from(face.classList).find(c => faceRotations[c]);
       const targetRotation = faceRotations[faceClass];
 
-      // Rotate cube so face points straight ahead, then scale slightly
+      // Snap whole cube to target orientation cleanly
       gsap.to(cube, {
         rotateX: targetRotation.rotateX,
         rotateY: targetRotation.rotateY,
-        scale: 1.4, 
+        scale: 1.3,
         duration: 0.7,
         ease: 'power2.inOut',
       });
 
-      // Update current angles so manual dragging continues smoothly from here
       currentX = targetRotation.rotateX;
       currentY = targetRotation.rotateY;
     }
   });
 });
 
-// Reset view when clicking off the cube
+/* Background click reset */
 window.addEventListener('click', () => {
   if (activeFace) {
+    gsap.set(faces, { clearProps: "transform,z,scale" });
     activeFace.classList.remove('expanded');
     activeFace = null;
+
     gsap.to(cube, {
+      rotateX: -15,
+      rotateY: 25,
       scale: 1,
-      duration: 0.5,
+      duration: 0.6,
       ease: 'power2.inOut'
     });
+
+    currentX = -15;
+    currentY = 25;
   }
 });
