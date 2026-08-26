@@ -28,6 +28,8 @@ body {
   position: relative;
   transform-style: preserve-3d;
   cursor: pointer;
+  /* Gives the cube a natural 3D tilt by default */
+  transform: rotateX(-15deg) rotateY(25deg);
 }
 
 .face {
