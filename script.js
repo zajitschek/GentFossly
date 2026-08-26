@@ -2,7 +2,6 @@ const cube = document.getElementById('cube');
 const faces = document.querySelectorAll('.face');
 let activeFace = null;
 
-// Target rotation angles for each face to bring it directly to the front
 const faceRotations = {
   front:  { rotateX: 0,   rotateY: 0 },
   back:   { rotateX: 0,   rotateY: 180 },
@@ -17,6 +16,7 @@ let currentY = 25;
 let touchStartX = 0;
 let touchStartY = 0;
 let isDragging = false;
+let ignoreClicks = false; // Lock flag to stop iOS synthetic double-taps
 
 /* --- 1. MOUSE MOVEMENT (Desktop) --- */
 window.addEventListener('mousemove', (e) => {
@@ -50,8 +50,7 @@ window.addEventListener('touchmove', (e) => {
   const deltaX = touchX - touchStartX;
   const deltaY = touchY - touchStartY;
 
-  // Mark as dragging if movement is more than a slight tap offset
-  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+  if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
     isDragging = true;
   }
 
@@ -69,19 +68,12 @@ window.addEventListener('touchmove', (e) => {
   touchStartY = touchY;
 }, { passive: true });
 
-/* --- 3. TAP INTERACTION FOR FACES --- */
-function handleFaceClick(e, face) {
-  // Ignore tap if the user was actually dragging/swiping the cube
-  if (isDragging) return;
-  
-  e.stopPropagation();
-  e.preventDefault();
-
-  // Clear any residual inline transforms on faces
+/* --- 3. UNIFIED ACTION HANDLER --- */
+function processFaceTap(face) {
   gsap.set(faces, { clearProps: "transform,z,scale" });
 
   if (activeFace === face) {
-    // Tapped the same active face: reset back to default cube view
+    // Tap active face again to close
     face.classList.remove('expanded');
     activeFace = null;
 
@@ -96,7 +88,7 @@ function handleFaceClick(e, face) {
     currentX = -15;
     currentY = 25;
   } else {
-    // Close existing active face if another face is tapped
+    // Switch active face
     if (activeFace) {
       activeFace.classList.remove('expanded');
     }
@@ -104,11 +96,9 @@ function handleFaceClick(e, face) {
     activeFace = face;
     face.classList.add('expanded');
 
-    // Find class orientation
     const faceClass = Array.from(face.classList).find(c => faceRotations[c]);
     const targetRotation = faceRotations[faceClass];
 
-    // Smoothly turn the cube so the selected face aligns straight ahead
     gsap.to(cube, {
       rotateX: targetRotation.rotateX,
       rotateY: targetRotation.rotateY,
@@ -122,12 +112,31 @@ function handleFaceClick(e, face) {
   }
 }
 
+/* --- 4. EVENT BINDINGS WITH DEBOUNCE LOCK --- */
 faces.forEach((face) => {
-  face.addEventListener('touchend', (e) => handleFaceClick(e, face));
-  face.addEventListener('click', (e) => handleFaceClick(e, face));
+  // Primary Touch Event for Mobile
+  face.addEventListener('touchend', (e) => {
+    if (isDragging) return;
+    
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Lock out immediate follow-up desktop/mouse clicks from iOS
+    ignoreClicks = true;
+    setTimeout(() => { ignoreClicks = false; }, 400);
+
+    processFaceTap(face);
+  });
+
+  // Fallback Click Event for Desktop Mouse
+  face.addEventListener('click', (e) => {
+    if (ignoreClicks) return;
+    e.stopPropagation();
+    processFaceTap(face);
+  });
 });
 
-/* --- 4. RESET WHEN TAPPING BACKGROUND --- */
+/* --- 5. BACKGROUND RESET --- */
 function resetCube() {
   if (activeFace) {
     gsap.set(faces, { clearProps: "transform,z,scale" });
@@ -147,9 +156,15 @@ function resetCube() {
   }
 }
 
-window.addEventListener('click', resetCube);
 window.addEventListener('touchend', (e) => {
-  // Only trigger background reset if the tap wasn't on a face
+  if (ignoreClicks) return;
+  if (!e.target.closest('.face')) {
+    resetCube();
+  }
+});
+
+window.addEventListener('click', (e) => {
+  if (ignoreClicks) return;
   if (!e.target.closest('.face')) {
     resetCube();
   }
