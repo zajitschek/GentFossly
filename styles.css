@@ -1,4 +1,4 @@
-/* Base Layout */
+/* Base layout */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -13,17 +13,15 @@ body {
   background-color: #050505;
   color: #ffffff;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* 3D Scene Container */
 .scene {
   width: 200px;
   height: 200px;
   perspective: 1000px;
 }
 
-/* Cube Wrapper */
 .cube {
   width: 100%;
   height: 100%;
@@ -32,31 +30,31 @@ body {
   cursor: pointer;
 }
 
-/* Individual Cube Faces */
 .face {
   position: absolute;
   width: 200px;
   height: 200px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 20, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 6px;
+  padding: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1.2rem;
-  letter-spacing: 0.05em;
+  text-align: center;
   user-select: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 4px;
+  overflow: hidden;
   transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
 .face:hover {
   border-color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(30, 30, 30, 0.85);
 }
 
-/* 3D Face Positions (TranslateZ is half of width/height) */
+/* 3D Placement */
 .front  { transform: rotateY(0deg) translateZ(100px); }
 .back   { transform: rotateY(180deg) translateZ(100px); }
 .right  { transform: rotateY(90deg) translateZ(100px); }
@@ -64,9 +62,56 @@ body {
 .top    { transform: rotateX(90deg) translateZ(100px); }
 .bottom { transform: rotateX(-90deg) translateZ(100px); }
 
-/* Active Expanded State */
+/* Face Content States */
+.face-preview {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  transition: opacity 0.3s ease;
+}
+
+.face-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.face-content h2 {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.face-content p {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+/* Expanded View Overrides */
 .face.expanded {
   z-index: 10;
   border-color: #ffffff;
-  background: rgba(20, 20, 20, 0.95);
+  background: rgba(10, 10, 10, 0.95);
+}
+
+.face.expanded .face-preview {
+  opacity: 0;
+}
+
+.face.expanded .face-content {
+  opacity: 1;
+  pointer-events: auto;
 }
