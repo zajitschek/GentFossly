@@ -6,109 +6,135 @@
 
 body {
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 100vw;
   background-color: #050505;
   color: #ffffff;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.scene {
-  width: 200px;
-  height: 200px;
-  perspective: 1000px;
-}
-
-.cube {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  cursor: pointer;
-  /* Starting 3D angle on load */
-  transform: rotateX(-15deg) rotateY(25deg);
-}
-
-.face {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  background: rgba(20, 20, 20, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 6px;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  user-select: none;
-  overflow: hidden;
-  backface-visibility: visible;
-  /* Smooth transitions for internal elements */
-  transition: border-color 0.3s ease, background-color 0.3s ease;
-}
-
-/* Precise CSS positioning (do not touch with JS inline styles) */
-.front  { transform: rotateY(0deg) translateZ(100px) !important; }
-.back   { transform: rotateY(180deg) translateZ(100px) !important; }
-.right  { transform: rotateY(90deg) translateZ(100px) !important; }
-.left   { transform: rotateY(-90deg) translateZ(100px) !important; }
-.top    { transform: rotateX(90deg) translateZ(100px) !important; }
-.bottom { transform: rotateX(-90deg) translateZ(100px) !important; }
-
-/* Content visibilities */
-.face-preview {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  transition: opacity 0.3s ease;
-}
-
-.face-content {
-  position: absolute;
+#webgl {
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  padding: 20px;
-  box-sizing: border-box;
+  z-index: 1;
+}
+
+/* Floating 3D Text Labels */
+#labels-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cube-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.3s ease, color 0.2s ease;
+  background: rgba(10, 10, 10, 0.6);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+}
+
+.cube-label:hover {
+  border-color: #ffffff;
+  background: rgba(30, 30, 30, 0.8);
+}
+
+/* Modal Styling */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  opacity: 0;
+  padding: 20px;
   pointer-events: none;
-  transition: opacity 0.4s ease;
-}
-
-.face-content h2 {
-  font-size: 0.9rem;
-  letter-spacing: 0.1em;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.face-content p {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: #ffffff;
-}
-
-/* Expanded active state */
-.face.expanded {
-  border-color: #ffffff;
-  background: rgba(10, 10, 10, 0.95);
-}
-
-.face.expanded .face-preview {
   opacity: 0;
 }
 
-.face.expanded .face-content {
-  opacity: 1;
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: rgba(15, 15, 15, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 35px 30px;
+  transform: scale(0.85);
   pointer-events: auto;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 2rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.close-btn:hover {
+  opacity: 1;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  align-items: center;
+}
+
+.text-block h2 {
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.text-block p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.image-block img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
 }
